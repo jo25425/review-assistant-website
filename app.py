@@ -1,8 +1,9 @@
+import os
 import streamlit as st
 from streamlit import session_state
 import requests
 
-API_URL = 'http://127.0.0.1:8000/'
+API_URL = os.environ.get('API_URL')  # Set to 'http://127.0.0.1:8000/' in .env to use local API
 RATINGS_EXPLAINED = ["Very bad", "Bad", "Acceptable", "Good", "Excellent"]
 
 if 'criteria_clicked' not in session_state:
@@ -22,27 +23,42 @@ def click_reviews_button():
 
 @st.cache_data()
 def get_criteria():
-    # res = requests.get(API_URL + 'criteria', product=product)
-    # if res.status_code == 200:
-    if True:
-        # criteria = res.json()
-        criteria = ["Coverage", "Longevity", "Application", "Shade range",
-                    "Packaging", "Skincare benefits"]
-    return criteria
+    # Dummy data
+    if API_URL is None:
+        return ["Coverage", "Longevity", "Application", "Shade range",
+                "Packaging", "Skincare benefits"]
+
+    try:
+        res = requests.get(API_URL + 'criteria', params=dict(product=product))
+        if res.status_code == 200:
+            criteria = res.json()
+            return criteria
+    except:
+        return
 
 
 @st.cache_data()
 def get_reviews():
-    # res = requests.get(API_URL + 'reviews', product=product, rated_criteria=rated_criteria)
-    # if res.status_code == 200:
-    if True:
-        # reviews = res.json()
-        reviews = [
-            "asdiub aosdubfqeriuobv opubqdfipuerbfipvberq",
-            "asdiufbiqer rfiuqbaucewq432q coijqhweofih oqwehfouqeh ohuiou",
-            "qoedfi pqoiehfoqh pqiewhfpqierhf ewpifh    [weofjojhh]"
+    if API_URL is None:
+        return [
+            "The product arrived in excellent condition, exactly as described "
+            "on their website. I'm thrilled with the quality and will definitely "
+            "buy it again in the future. Highly recommended!",
+
+            "The product quality is consistently outstanding, exceeding my expectations every time.",
+
+            "Really good quality, lovely packaging & smells amazing. Affordable price."
         ]
-    return reviews
+    try:
+        res = requests.get(
+            API_URL + 'reviews',
+            params=dict(product=product, rated_criteria=session_state.rated_criteria)
+        )
+        if res.status_code == 200:
+            reviews = res.json()
+            return reviews
+    except:
+        return
 
 
 def rate_criteria(criteria: list[str]):
@@ -62,9 +78,9 @@ def rate_criteria(criteria: list[str]):
                 # captions=RATINGS_EXPLAINED if i == 0 else None,
                 value=3,
                 key=f'criterium_{i}',
-                # horizontal=True
                 label_visibility='collapsed'
             )
+    session_state.rated_criteria = rated_criteria
     st.button("Go!", key='go_reviews', on_click=click_reviews_button)
 
 
@@ -74,7 +90,7 @@ def show_reviews(reviews: list[str]):
         st.text_area(f"Review #{i+1}", review, key=f'review_{i}')
 
 
-'''# Review Writing Assistant'''
+'''# Review Writing Assistant ⭐️📝'''
 
 product = st.text_area(label="Which product do you want to review?",
                        value="Maybelline Instant Age Rewind Eraser Dark Circles Treatment Concealer",
@@ -88,11 +104,11 @@ if session_state.criteria_clicked:
     if criteria:
         rate_criteria(criteria)
     else:
-        st.error("Uh oh... something went wrong 😵")
+        st.error("Could not get criteria ❌")
 
 if session_state.reviews_clicked:
     reviews = get_reviews()
     if reviews:
         show_reviews(reviews)
     else:
-        st.error("Uh oh... something went wrong 😵")
+        st.error("Could not get reviews ❌")
