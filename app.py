@@ -29,21 +29,20 @@ def click_reviews_button():
 
 
 @st.cache_data()
-def get_criteria():
+def get_criteria(current_product):
     # Dummy data
     if API_URL is None:
         return ["Coverage", "Longevity", "Application", "Shade range",
                 "Packaging", "Skincare benefits"]
 
-    res = requests.get(API_URL + 'criteria', params=dict(product=product))
+    res = requests.get(API_URL + 'criteria', params=dict(product=current_product))
     res.raise_for_status()
     criteria = res.json()
     return criteria
 
 
 @st.cache_data()
-def get_reviews():
-
+def get_reviews(current_product, current_rated_criteria):
     if API_URL is None:
         return [
             "The product arrived in excellent condition, exactly as described "
@@ -56,7 +55,7 @@ def get_reviews():
         ]
     res = requests.post(
         API_URL + 'reviews',
-        params=dict(product=product, rated_criteria=json.dumps(session_state.rated_criteria))
+        params=dict(product=current_product, rated_criteria=json.dumps(current_rated_criteria))
     )
     res.raise_for_status()
     reviews = res.json()
@@ -103,7 +102,7 @@ go_criteria = st.button("Go!", key='go_criteria', on_click=click_criteria_button
 if session_state.criteria_clicked:
     session_state.show_criteria = True
     try:
-        criteria = get_criteria()
+        criteria = get_criteria(product)
         rate_criteria(criteria)
     except requests.RequestException as e:
         message = ERROR_MESSAGE_TEMPLATE.format(requested='criteria', error=e)
@@ -111,7 +110,7 @@ if session_state.criteria_clicked:
 
 if session_state.reviews_clicked:
     try:
-        reviews = get_reviews()
+        reviews = get_reviews(product, session_state.rated_criteria)
         show_reviews(reviews)
     except Exception as e:
         message = ERROR_MESSAGE_TEMPLATE.format(requested='reviews', error=e)
