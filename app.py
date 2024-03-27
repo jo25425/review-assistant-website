@@ -1,10 +1,17 @@
+import json
 import os
 import streamlit as st
 from streamlit import session_state
 import requests
 
-API_URL = os.environ.get('API_URL')  # Set to 'http://127.0.0.1:8000/' in .env to use local API
-RATINGS_EXPLAINED = ["Very bad", "Bad", "Acceptable", "Good", "Excellent"]
+
+API_URL = os.environ.get('API_URL')  # Set to 'http://127.0.0.1:8000/' to use local API
+
+ERROR_MESSAGE_TEMPLATE = """
+Could not get {requested}
+
+{error}
+"""
 
 if 'criteria_clicked' not in session_state:
     session_state.criteria_clicked = False
@@ -28,17 +35,15 @@ def get_criteria():
         return ["Coverage", "Longevity", "Application", "Shade range",
                 "Packaging", "Skincare benefits"]
 
-    try:
-        res = requests.get(API_URL + 'criteria', params=dict(product=product))
-        if res.status_code == 200:
-            criteria = res.json()
-            return criteria
-    except:
-        return
+    res = requests.get(API_URL + 'criteria', params=dict(product=product))
+    res.raise_for_status()
+    criteria = res.json()
+    return criteria
 
 
 @st.cache_data()
 def get_reviews():
+
     if API_URL is None:
         return [
             "The product arrived in excellent condition, exactly as described "
@@ -49,16 +54,13 @@ def get_reviews():
 
             "Really good quality, lovely packaging & smells amazing. Affordable price."
         ]
-    try:
-        res = requests.get(
-            API_URL + 'reviews',
-            params=dict(product=product, rated_criteria=session_state.rated_criteria)
-        )
-        if res.status_code == 200:
-            reviews = res.json()
-            return reviews
-    except:
-        return
+    res = requests.post(
+        API_URL + 'reviews',
+        params=dict(product=product, rated_criteria=json.dumps(session_state.rated_criteria))
+    )
+    res.raise_for_status()
+    reviews = res.json()
+    return reviews
 
 
 def rate_criteria(criteria: list[str]):
@@ -67,15 +69,14 @@ def rate_criteria(criteria: list[str]):
     rated_criteria = {}
     for i, criterium in enumerate(criteria):
         with st.container():  # Creates a row
-            col1, col2 = st.columns([1,3])
+            col1, col2 = st.columns(2)
             # Label
             col1.text(criterium.title())
             # Slider for the rating
             rated_criteria[criterium] = col2.slider(
                 criterium.title(),
                 min_value=1,
-                max_value=len(RATINGS_EXPLAINED),
-                # captions=RATINGS_EXPLAINED if i == 0 else None,
+                max_value=5,
                 value=3,
                 key=f'criterium_{i}',
                 label_visibility='collapsed'
@@ -87,7 +88,8 @@ def rate_criteria(criteria: list[str]):
 def show_reviews(reviews: list[str]):
     '''Here are some reviews you could use.'''
     for i, review in enumerate(reviews):
-        st.text_area(f"Review #{i+1}", review, key=f'review_{i}')
+        st.text_area(f"##### Review #{i+1}", review, key=f'review_{i}',
+                     height=int(len(review) / 2.5))  # Just from eyeballing
 
 
 '''# Review Writing Assistant ⭐️📝'''
@@ -100,15 +102,17 @@ go_criteria = st.button("Go!", key='go_criteria', on_click=click_criteria_button
 
 if session_state.criteria_clicked:
     session_state.show_criteria = True
-    criteria = get_criteria()
-    if criteria:
+    try:
+        criteria = get_criteria()
         rate_criteria(criteria)
-    else:
-        st.error("Could not get criteria ❌")
+    except requests.RequestException as e:
+        message = ERROR_MESSAGE_TEMPLATE.format(requested='criteria', error=e)
+        st.error(message, icon='❌')
 
 if session_state.reviews_clicked:
-    reviews = get_reviews()
-    if reviews:
+    try:
+        reviews = get_reviews()
         show_reviews(reviews)
-    else:
-        st.error("Could not get reviews ❌")
+    except Exception as e:
+        message = ERROR_MESSAGE_TEMPLATE.format(requested='reviews', error=e)
+        st.error(message, icon='❌')
