@@ -22,6 +22,8 @@ EXAMPLE_PRODUCTS = [
     "Maybelline Instant Age Rewind Eraser Dark Circles Treatment Concealer"
 ]
 
+st.set_page_config(page_title="Review Writing Assistant")
+
 if 'product' not in session_state:
     session_state.product = choice(EXAMPLE_PRODUCTS)
 if 'criteria_clicked' not in session_state:
