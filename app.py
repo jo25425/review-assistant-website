@@ -80,12 +80,13 @@ def rate_criteria(criteria: list[str]):
 
     with st.form('criteria_form'):
         '''How would you rate the following?'''
+        ''''''
         rated_criteria = {}
         for i, criterium in enumerate(criteria):
             with st.container():  # Creates a row
-                col1, col2 = st.columns(2)
+                col1, col2 = st.columns([2,3])
                 # Label
-                col1.text(criterium.title())
+                col1.markdown(criterium.capitalize())
                 # Slider for the rating
                 rated_criteria[criterium] = col2.slider(
                     criterium.title(),
