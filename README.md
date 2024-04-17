@@ -20,10 +20,12 @@ The requirements can be automatically installed with:
 The app can then be run locally with:
 `make streamlit`
 
-ℹ️ Please note that when running locally, the API this frontend points to should be adjusted directly in the code.
+ℹ️ When running locally, the API this frontend points to should be adjusted directly in the code.
 
-#### On Streamlit Cloud 
+#### On Streamlit Cloud
 
 This application is registered with streamlit.io. It automatically updates according to the main branch.
 
 It can be accessed at the following address: http://review-writing-assistant.streamlit.app 🚀
+
+ℹ️ If the app isn't used by anyone for a while, it might need to be reactivated first.
